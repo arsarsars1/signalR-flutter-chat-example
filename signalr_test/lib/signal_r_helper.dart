@@ -1,65 +1,120 @@
 import 'dart:developer';
 
 import 'package:signalr_core/signalr_core.dart';
-
-import 'Models/message.dart';
+import 'package:signalr_test/signal_r_protocol.dart';
 
 class SignalRHelper {
-  final url = 'https://84af-39-34-184-179.ap.ngrok.io/chatHub';
+  SignalRHelper._privateConstructor();
+
+  static final SignalRHelper _instance = SignalRHelper._privateConstructor();
+  factory SignalRHelper() {
+    return _instance;
+  }
+
+  init(Function() onNotifyFunction) {
+    _onNotify = onNotifyFunction;
+  }
+
+  Function()? _onNotify;
+
+  void notifyListeners() {
+    _onNotify?.call();
+  }
+
+  final String url = 'https://d6fb-39-34-185-242.ap.ngrok.io/chatHub';
+  final webSocketTime = 5 * (60 * 1000); // 5 minute refresh web socket
   HubConnection? hubConnection;
-  var messageList = <Message>[];
   String textMessage = '';
 
   Future<void> connect(receiveMessageHandler) async {
     try {
       hubConnection = HubConnectionBuilder()
           .withAutomaticReconnect(1000)
-          .withUrl(url)
+          .withUrl(url, HttpTransportType.webSockets)
+          .withHubProtocol(CustomHubProtocol())
           .build();
-      hubConnection?.onclose((error) {
-        log('Connection Close');
+      hubConnection?.on('ReceiveMessage', (arg) {
+        if (arg != null && arg.isNotEmpty) {
+          for (var element in arg) {
+            log(element);
+          }
+          receiveMessageHandler(arg);
+          notifyListeners();
+        } else {
+          log("SignalR empty");
+        }
       });
-      hubConnection?.on('ReceiveMessage', receiveMessageHandler);
+      hubConnection?.onclose((error) {
+        log('SignalR debugConnection Close');
+      });
+      log("SignalR debug ReceiveMessage init");
       await _start();
+      notifyListeners();
     } catch (e) {
-      log("SignalR " + e.toString());
+      log("SignalR debug $e");
     }
   }
 
-  void sendMessage(String name, String message) {
-    hubConnection?.invoke('SendMessage', args: [name, message]);
-    // messageList.add(Message(
-    //     name: name,
-    //     message: message,
-    //     isMine: true));
-    textMessage = '';
+  Future<void> sendMessage(
+      {required String senderId,
+      required String senderName,
+      required String recipientId,
+      required String recipientName,
+      required String message,
+      required String type}) async {
+    if (await restartIfNeedIt()) {
+      hubConnection?.invoke('SendMessage', args: [
+        senderId,
+        senderName,
+        recipientId,
+        recipientName,
+        message,
+        type
+      ]);
+      // messageList.add(Message(
+      //     name: name,
+      //     message: message,
+      //     isMine: true));
+      textMessage = '';
+      notifyListeners();
+    } else {
+      return Future.error(Exception(
+          'Cannot send Message because connection is in \'Disconnected\' state.'));
+    }
   }
 
   Future<void> _start() async {
     await hubConnection?.start();
     log(hubConnection?.connectionId ?? "");
+    log("SignalR debug connectionID");
   }
 
   bool isWorking() {
-    return hubConnection?.state?.index == 2;
+    return hubConnection != null ? hubConnection?.state?.index == 2 : false;
   }
 
   Future<void> disconnect() async {
     hubConnection?.stop();
+    log("SignalR debug stop");
   }
 
   Future<void> reStart() async {
     await hubConnection?.stop();
+    log("SignalR debug restarting");
     await _start();
-    // await SignalRSend().identify();
+    identify();
   }
 
   Future<bool> restartIfNeedIt() async {
     if (!isWorking()) {
       await reStart();
     } else {
-      // await SignalRSend().identify();
+      log("SignalR debug identity");
+      identify();
     }
     return isWorking();
   }
+
+  int? identify() =>
+      hubConnection?.keepAliveIntervalInMilliseconds = webSocketTime;
 }

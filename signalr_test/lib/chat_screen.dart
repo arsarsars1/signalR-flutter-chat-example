@@ -9,20 +9,14 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key, required this.name}) : super(key: key);
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  var scrollController = ScrollController();
-  var txtController = TextEditingController();
-  SignalRHelper signalR = SignalRHelper();
-
-  receiveMessageHandler(args) {
-    signalR.messageList.add(Message(
-        name: args[0], message: args[1], isMine: args[0] == widget.name));
-    scrollController.jumpTo(scrollController.position.maxScrollExtent + 75);
-    setState(() {});
-  }
+  final ScrollController scrollController = ScrollController();
+  final TextEditingController txtController = TextEditingController();
+  static List<MessageModel> messageList = <MessageModel>[];
+  SignalRHelper signalRHelper = SignalRHelper();
 
   @override
   Widget build(BuildContext context) {
@@ -35,18 +29,15 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: ListView.separated(
               controller: scrollController,
-              itemCount: signalR.messageList.length,
+              itemCount: messageList.length,
               itemBuilder: (context, i) {
                 return ListTile(
                   title: Text(
-                    signalR.messageList[i].isMine
-                        ? signalR.messageList[i].message
-                        : signalR.messageList[i].name +
-                            ': ' +
-                            signalR.messageList[i].message,
-                    textAlign: signalR.messageList[i].isMine
-                        ? TextAlign.end
-                        : TextAlign.start,
+                    messageList[i].isMine
+                        ? messageList[i].message
+                        : '${messageList[i].senderName}: ${messageList[i].message}',
+                    textAlign:
+                        messageList[i].isMine ? TextAlign.end : TextAlign.start,
                   ),
                 );
               },
@@ -70,8 +61,16 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: Colors.lightBlue,
                     ),
                     onPressed: () async {
-                      await signalR.restartIfNeedIt();
-                      signalR.sendMessage(widget.name, txtController.text);
+                      await signalRHelper
+                        ..restartIfNeedIt();
+                      signalRHelper
+                        ..sendMessage(
+                            senderId: "${widget.name}12",
+                            senderName: widget.name,
+                            recipientId: "abdul12",
+                            recipientName: "abdul",
+                            message: txtController.text,
+                            type: "text");
                       txtController.clear();
                       scrollController.jumpTo(
                           scrollController.position.maxScrollExtent + 75);
@@ -89,14 +88,31 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    signalR.connect(receiveMessageHandler);
+    signalRHelper
+      ..init(() {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    signalRHelper..connect(receiveMessageHandler);
+  }
+
+  receiveMessageHandler(args) {
+    MessageModel messageModel = MessageModel.fromJson(args);
+    print(messageModel.toJson());
+    // if (MessageModel.isValidAdd(messageModel, messageList)) {
+    messageModel.isMine = "${widget.name}12" == messageModel.senderId;
+    messageList.add(messageModel);
+    scrollController.jumpTo(scrollController.position.maxScrollExtent + 75);
+    setState(() {});
+    // }
   }
 
   @override
   void dispose() {
     txtController.dispose();
     scrollController.dispose();
-    signalR.disconnect();
+    signalRHelper..disconnect();
     super.dispose();
   }
 }
