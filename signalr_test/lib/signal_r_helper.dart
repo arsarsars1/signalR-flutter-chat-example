@@ -21,7 +21,7 @@ class SignalRHelper {
     _onNotify?.call();
   }
 
-  final String url = 'https://d6fb-39-34-185-242.ap.ngrok.io/chatHub';
+  final String url = 'https://85c0-39-34-185-242.ap.ngrok.io/chatHub';
   final webSocketTime = 5 * (60 * 1000); // 5 minute refresh web socket
   HubConnection? hubConnection;
   String textMessage = '';
@@ -35,9 +35,6 @@ class SignalRHelper {
           .build();
       hubConnection?.on('ReceiveMessage', (arg) {
         if (arg != null && arg.isNotEmpty) {
-          for (var element in arg) {
-            log(element);
-          }
           receiveMessageHandler(arg);
           notifyListeners();
         } else {
@@ -71,10 +68,6 @@ class SignalRHelper {
         message,
         type
       ]);
-      // messageList.add(Message(
-      //     name: name,
-      //     message: message,
-      //     isMine: true));
       textMessage = '';
       notifyListeners();
     } else {

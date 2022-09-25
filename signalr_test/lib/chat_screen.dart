@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'Models/message.dart';
@@ -61,16 +63,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: Colors.lightBlue,
                     ),
                     onPressed: () async {
-                      await signalRHelper
-                        ..restartIfNeedIt();
-                      signalRHelper
-                        ..sendMessage(
-                            senderId: "${widget.name}12",
-                            senderName: widget.name,
-                            recipientId: "abdul12",
-                            recipientName: "abdul",
-                            message: txtController.text,
-                            type: "text");
+                      await signalRHelper.restartIfNeedIt();
+                      signalRHelper.sendMessage(
+                          senderId: "${widget.name}12",
+                          senderName: widget.name,
+                          recipientId: "abdul12",
+                          recipientName: "abdul",
+                          message: txtController.text,
+                          type: "text");
                       txtController.clear();
                       scrollController.jumpTo(
                           scrollController.position.maxScrollExtent + 75);
@@ -88,31 +88,33 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    signalRHelper
-      ..init(() {
-        if (mounted) {
-          setState(() {});
-        }
-      });
-    signalRHelper..connect(receiveMessageHandler);
+    signalRHelper.init(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    signalRHelper.connect(receiveMessageHandler);
   }
 
-  receiveMessageHandler(args) {
-    MessageModel messageModel = MessageModel.fromJson(args);
+  receiveMessageHandler(List<dynamic> args) {
+    MessageModel messageModel = MessageModel.fromJson(json.decode(args[0]));
     print(messageModel.toJson());
-    // if (MessageModel.isValidAdd(messageModel, messageList)) {
-    messageModel.isMine = "${widget.name}12" == messageModel.senderId;
-    messageList.add(messageModel);
-    scrollController.jumpTo(scrollController.position.maxScrollExtent + 75);
-    setState(() {});
-    // }
+    if (MessageModel.isValidAdd(messageModel, messageList) == false) {
+      print("inside");
+      messageModel.isMine = "${widget.name}12" == messageModel.senderId;
+      messageList.add(messageModel);
+      scrollController.jumpTo(scrollController.position.maxScrollExtent + 75);
+      setState(() {});
+    } else {
+      print("else");
+    }
   }
 
   @override
   void dispose() {
     txtController.dispose();
     scrollController.dispose();
-    signalRHelper..disconnect();
+    signalRHelper.disconnect();
     super.dispose();
   }
 }

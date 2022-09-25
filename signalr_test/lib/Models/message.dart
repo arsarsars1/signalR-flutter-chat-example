@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 
 class MessageModel {
-  String senderId;
-  String senderName;
-  String receiverId;
-  String receiverName;
-  String type;
-  String message;
-  DateTime createdAt;
-  bool isMine = false;
+  final String senderId;
+  final String senderName;
+  final String receiverId;
+  final String receiverName;
+  final String type;
+  final String message;
+  final DateTime createdAt;
+  bool isMine;
 
   MessageModel({
     required this.type,
@@ -23,23 +23,23 @@ class MessageModel {
     this.isMine = false,
   });
 
-  MessageModel.fromJson(Map<String, dynamic> data)
-      : senderId = data['SenderId'] ?? '',
-        senderName = data['SenderName'] ?? '',
-        receiverId = data['ReceiverId'] ?? '',
-        receiverName = data['ReceiverName'] ?? '',
-        type = data['Type'] ?? '',
-        message = data['Message'] ?? '',
-        createdAt = data['CreatedAt'].toIso8601String();
+  factory MessageModel.fromJson(Map<String, dynamic> data) => MessageModel(
+      senderId: data['senderId'],
+      senderName: data['senderName'],
+      receiverId: data['receiverId'],
+      receiverName: data['receiverName'],
+      type: data['type'],
+      message: data['message'],
+      createdAt: DateTime.parse(data["createdAt"]));
 
   Map<String, dynamic> toJson() => {
-        "SenderId": senderId,
-        "SenderName": senderName,
-        "ReceiverId": receiverId,
-        "ReceiverName": receiverName,
-        "Type": type,
-        "Message": message,
-        "CreatedAt": createdAt
+        "senderId": senderId,
+        "senderName": senderName,
+        "receiverId": receiverId,
+        "receiverName": receiverName,
+        "type": type,
+        "message": message,
+        "createdAt": createdAt
       };
 
   static bool isValidAdd(MessageModel message, List<MessageModel> messageList) {
